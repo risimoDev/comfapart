@@ -1,0 +1,332 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: 0 0% 10%;
+  --background: 0 0% 100%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 210 10% 45%;
+  --border: 210 15% 88%;
+  --ring: 201 100% 30%;
+  
+  /* Цветовая схема: #00639A основной, #89B6CD вторичный */
+  --primary: 201 100% 30%; /* #00639A синий */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 201 35% 67%; /* #89B6CD голубой */
+  --secondary-foreground: 0 0% 10%;
+  --accent: 201 100% 30%; /* #00639A */
+  --accent-foreground: 0 0% 100%;
+  
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+}
+
+.dark {
+  --foreground: 0 0% 95%;
+  --background: 210 15% 10%;
+  --muted: 210 15% 18%;
+  --muted-foreground: 210 10% 65%;
+  --border: 210 15% 25%;
+  --ring: 201 100% 40%;
+  
+  --primary: 201 100% 35%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 201 35% 67%;
+  --secondary-foreground: 0 0% 10%;
+  --accent: 201 100% 40%;
+  --accent-foreground: 0 0% 100%;
+  
+  --card: 210 15% 15%;
+  --card-foreground: 0 0% 95%;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  line-height: 1.6;
+}
+
+/* Scrollbar стилизация */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Skeleton анимация */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Плавное появление */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Кастомный фокус */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+/* Градиенты */
+.gradient-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #d946ef 0%, #a21caf 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6 0%, #d946ef 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Карточка с эффектом */
+.card-hover {
+  @apply transition-all duration-300;
+}
+
+.card-hover:hover {
+  @apply shadow-xl -translate-y-1;
+}
+
+/* Кнопка с эффектом */
+.btn-effect {
+  @apply relative overflow-hidden;
+}
+
+.btn-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.btn-effect:hover::after {
+  transform: translateX(100%);
+}
+
+/* Слайдер изображений */
+.image-slider {
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.image-slider > * {
+  scroll-snap-align: start;
+}
+
+/* Overlay градиент для изображений */
+.image-overlay {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.3) 30%,
+    transparent 100%
+  );
+}
+
+/* Стили для календаря */
+.calendar-day {
+  @apply w-10 h-10 flex items-center justify-center rounded-full text-sm cursor-pointer transition-colors;
+}
+
+.calendar-day:hover:not(.disabled) {
+  @apply bg-primary-100 dark:bg-primary-900;
+}
+
+.calendar-day.selected {
+  @apply bg-primary-500 text-white;
+}
+
+.calendar-day.in-range {
+  @apply bg-primary-100 dark:bg-primary-900/50;
+}
+
+.calendar-day.disabled {
+  @apply text-gray-300 dark:text-gray-600 cursor-not-allowed;
+}
+
+/* Анимация для модальных окон */
+.modal-overlay {
+  animation: modalOverlayIn 0.2s ease-out;
+}
+
+@keyframes modalOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  animation: modalContentIn 0.3s ease-out;
+}
+
+@keyframes modalContentIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Уведомления */
+.toast {
+  animation: toastIn 0.3s ease-out;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Анимация загрузки */
+.loading-dots::after {
+  content: '.';
+  animation: loadingDots 1.5s infinite;
+}
+
+@keyframes loadingDots {
+  0%, 20% {
+    content: '.';
+  }
+  40% {
+    content: '..';
+  }
+  60%, 100% {
+    content: '...';
+  }
+}
+
+/* Стили форм */
+.form-input {
+  @apply w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 
+         transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+}
+
+.form-error {
+  @apply text-sm text-red-500 mt-1;
+}
+
+/* Таблицы в админке */
+.admin-table {
+  @apply w-full border-collapse;
+}
+
+.admin-table th {
+  @apply px-4 py-3 text-left text-sm font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700;
+}
+
+.admin-table td {
+  @apply px-4 py-4 text-sm border-b border-gray-200 dark:border-gray-700;
+}
+
+.admin-table tr:hover td {
+  @apply bg-gray-50 dark:bg-gray-800/30;
+}
+
+/* Статус бейджи */
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+}
+
+.status-confirmed {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+}
+
+.status-paid {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+}
+
+.status-canceled {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+}
+
+.status-completed {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400;
+}

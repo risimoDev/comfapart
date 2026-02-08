@@ -1,0 +1,989 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  passwordHash          String
+  firstName             String
+  lastName              String
+  phone                 String?
+  avatar                String?
+  role                  UserRole               @default(USER)
+  status                UserStatus             @default(ACTIVE)
+  emailVerified         Boolean                @default(false)
+  preferredLocale       String                 @default("ru")
+  preferredCurrency     String                 @default("RUB")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  telegramId            BigInt?                @unique
+  telegramUsername      String?
+  telegramVerified      Boolean                @default(false)
+  adminLogs             AdminLog[]             @relation("AdminLogs")
+  ownedApartments       Apartment[]            @relation("OwnedApartments")
+  bookings              Booking[]
+  calendarSyncs         CalendarSync[]
+  favorites             Favorite[]
+  notifications         Notification[]
+  oauthAccounts         OAuthAccount[]
+  profileChangedBy      ProfileChangeLog[]     @relation("AdminProfileChanges")
+  profileChanges        ProfileChangeLog[]     @relation("UserProfileChanges")
+  refreshTokens         RefreshToken[]
+  reviews               Review[]
+  securityEvents        SecurityEvent[]
+  sessions              Session[]
+  telegramVerifications TelegramVerification[]
+  verificationTokens    VerificationToken[]
+
+  @@index([email])
+  @@index([telegramId])
+  @@index([role])
+  @@index([status])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Apartment {
+  id               String                  @id @default(uuid())
+  slug             String                  @unique
+  status           ApartmentStatus         @default(DRAFT)
+  title            String
+  description      String
+  shortDescription String?
+  city             String
+  address          String
+  district         String?
+  latitude         Float?
+  longitude        Float?
+  area             Float
+  rooms            Int
+  bedrooms         Int
+  bathrooms        Int
+  floor            Int?
+  totalFloors      Int?
+  maxGuests        Int                     @default(2)
+  minNights        Int                     @default(1)
+  maxNights        Int                     @default(30)
+  checkInTime      String                  @default("14:00")
+  checkOutTime     String                  @default("12:00")
+  metaTitle        String?
+  metaDescription  String?
+  averageRating    Float?
+  reviewCount      Int                     @default(0)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  ownerId          String?
+  owner            User?                   @relation("OwnedApartments", fields: [ownerId], references: [id])
+  amenities        ApartmentAmenity[]
+  categories       ApartmentCategory[]
+  images           ApartmentImage[]
+  rules            ApartmentRule[]
+  tags             ApartmentTag[]
+  blockedDates     BlockedDate[]
+  bookings         Booking[]
+  calendarSyncs    CalendarSync[]
+  externalEvents   ExternalCalendarEvent[]
+  favorites        Favorite[]
+  pricing          Pricing?
+  reviews          Review[]
+  seasonalPrices   SeasonalPrice[]
+  weekdayPrices    WeekdayPrice[]
+
+  @@index([status])
+  @@index([city])
+  @@index([slug])
+  @@index([maxGuests])
+  @@index([ownerId])
+}
+
+model ApartmentImage {
+  id          String    @id @default(uuid())
+  apartmentId String
+  url         String
+  alt         String?
+  order       Int       @default(0)
+  isPrimary   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId])
+}
+
+model Amenity {
+  id         String             @id @default(uuid())
+  name       String             @unique
+  nameEn     String?
+  icon       String?
+  category   String
+  apartments ApartmentAmenity[]
+}
+
+model ApartmentAmenity {
+  apartmentId String
+  amenityId   String
+  amenity     Amenity   @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@id([apartmentId, amenityId])
+}
+
+model ApartmentRule {
+  id          String    @id @default(uuid())
+  apartmentId String
+  rule        String
+  ruleEn      String?
+  isAllowed   Boolean   @default(true)
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId])
+}
+
+model Category {
+  id          String              @id @default(uuid())
+  name        String
+  nameEn      String?
+  slug        String              @unique
+  description String?
+  icon        String?
+  order       Int                 @default(0)
+  apartments  ApartmentCategory[]
+}
+
+model ApartmentCategory {
+  apartmentId String
+  categoryId  String
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([apartmentId, categoryId])
+}
+
+model Tag {
+  id         String         @id @default(uuid())
+  name       String         @unique
+  slug       String         @unique
+  apartments ApartmentTag[]
+}
+
+model ApartmentTag {
+  apartmentId String
+  tagId       String
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([apartmentId, tagId])
+}
+
+model Pricing {
+  id              String    @id @default(uuid())
+  apartmentId     String    @unique
+  basePrice       Float
+  currency        String    @default("RUB")
+  cleaningFee     Float     @default(0)
+  serviceFee      Float     @default(0)
+  securityDeposit Float     @default(0)
+  weeklyDiscount  Float     @default(0)
+  monthlyDiscount Float     @default(0)
+  extraGuestFee   Float     @default(0)
+  baseGuests      Int       @default(2)
+  updatedAt       DateTime  @updatedAt
+  apartment       Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+}
+
+model SeasonalPrice {
+  id              String    @id @default(uuid())
+  apartmentId     String
+  name            String
+  startDate       DateTime
+  endDate         DateTime
+  priceMultiplier Float
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  apartment       Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@index([apartmentId])
+  @@index([startDate, endDate])
+}
+
+model WeekdayPrice {
+  id              String    @id @default(uuid())
+  apartmentId     String
+  dayOfWeek       Int
+  priceMultiplier Float
+  apartment       Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@unique([apartmentId, dayOfWeek])
+}
+
+model BlockedDate {
+  id          String            @id @default(uuid())
+  apartmentId String
+  date        DateTime          @db.Date
+  reason      String?
+  createdAt   DateTime          @default(now())
+  externalRef String?
+  source      BlockedDateSource @default(MANUAL)
+  apartment   Apartment         @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+
+  @@unique([apartmentId, date])
+  @@index([apartmentId])
+  @@index([date])
+  @@index([source])
+}
+
+model Booking {
+  id                 String                 @id @default(uuid())
+  bookingNumber      String                 @unique
+  apartmentId        String
+  userId             String
+  checkIn            DateTime               @db.Date
+  checkOut           DateTime               @db.Date
+  nights             Int
+  guests             Int
+  guestDetails       Json?
+  status             BookingStatus          @default(PENDING)
+  paymentStatus      PaymentStatus          @default(PENDING)
+  basePrice          Float
+  cleaningFee        Float                  @default(0)
+  serviceFee         Float                  @default(0)
+  extraGuestFee      Float                  @default(0)
+  seasonalAdjustment Float                  @default(0)
+  weekdayAdjustment  Float                  @default(0)
+  discount           Float                  @default(0)
+  promoDiscount      Float                  @default(0)
+  totalPrice         Float
+  currency           String                 @default("RUB")
+  promoCodeId        String?
+  guestComment       String?
+  adminComment       String?
+  contactName        String?
+  contactPhone       String?
+  contactEmail       String?
+  canceledAt         DateTime?
+  cancelReason       String?
+  refundAmount       Float?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  apartment          Apartment              @relation(fields: [apartmentId], references: [id])
+  promoCode          PromoCode?             @relation(fields: [promoCodeId], references: [id])
+  user               User                   @relation(fields: [userId], references: [id])
+  statusHistory      BookingStatusHistory[]
+  payments           Payment[]
+
+  @@index([apartmentId])
+  @@index([userId])
+  @@index([status])
+  @@index([checkIn, checkOut])
+  @@index([bookingNumber])
+}
+
+model BookingStatusHistory {
+  id         String         @id @default(uuid())
+  bookingId  String
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+  comment    String?
+  changedBy  String?
+  createdAt  DateTime       @default(now())
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  bookingId      String
+  amount         Float
+  currency       String        @default("RUB")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  externalId     String?
+  metadata       Json?
+  refundedAmount Float?
+  refundedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  booking        Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+model PromoCode {
+  id           String        @id @default(uuid())
+  code         String        @unique
+  type         PromoCodeType
+  value        Float
+  minNights    Int?
+  minAmount    Float?
+  maxDiscount  Float?
+  startDate    DateTime?
+  endDate      DateTime?
+  usageLimit   Int?
+  usageCount   Int           @default(0)
+  perUserLimit Int?
+  apartmentIds String[]
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bookings     Booking[]
+
+  @@index([code])
+  @@index([isActive])
+}
+
+model Review {
+  id                  String    @id @default(uuid())
+  apartmentId         String
+  userId              String
+  rating              Int
+  title               String?
+  comment             String
+  cleanlinessRating   Int?
+  locationRating      Int?
+  valueRating         Int?
+  communicationRating Int?
+  isApproved          Boolean   @default(false)
+  isPublished         Boolean   @default(false)
+  ownerReply          String?
+  ownerReplyDate      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  apartment           Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([apartmentId, userId])
+  @@index([apartmentId])
+  @@index([isPublished])
+}
+
+model Favorite {
+  userId      String
+  apartmentId String
+  createdAt   DateTime  @default(now())
+  apartment   Apartment @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, apartmentId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model CmsBlock {
+  id        String   @id @default(uuid())
+  key       String
+  title     String
+  content   String
+  locale    String   @default("ru")
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, locale])
+}
+
+model CompanySettings {
+  id                 String   @id @default(uuid())
+  name               String
+  legalName          String?
+  description        String?
+  email              String?
+  phone              String?
+  address            String?
+  inn                String?
+  ogrn               String?
+  bankAccount        String?
+  bankName           String?
+  bik                String?
+  socialLinks        Json?
+  privacyPolicy      String?
+  termsOfService     String?
+  cancellationPolicy String?
+  defaultServiceFee  Float    @default(0)
+  updatedAt          DateTime @updatedAt
+}
+
+model AdminLog {
+  id        String      @id @default(uuid())
+  adminId   String
+  action    AdminAction
+  entity    String
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime    @default(now())
+  admin     User        @relation("AdminLogs", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model DailyStats {
+  id                String   @id @default(uuid())
+  date              DateTime @unique @db.Date
+  pageViews         Int      @default(0)
+  uniqueVisitors    Int      @default(0)
+  bookingsCreated   Int      @default(0)
+  bookingsConfirmed Int      @default(0)
+  bookingsCanceled  Int      @default(0)
+  totalRevenue      Float    @default(0)
+  avgBookingValue   Float    @default(0)
+  apartmentsViewed  Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Transaction {
+  id          String              @id @default(uuid())
+  bookingId   String?
+  apartmentId String?
+  type        TransactionType
+  category    TransactionCategory
+  amount      Float
+  currency    String              @default("RUB")
+  description String
+  reference   String?
+  date        DateTime            @db.Date
+  createdBy   String?
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+
+  @@index([type])
+  @@index([category])
+  @@index([date])
+  @@index([bookingId])
+  @@index([apartmentId])
+}
+
+model FinancialPeriod {
+  id              String    @id @default(uuid())
+  year            Int
+  month           Int
+  totalIncome     Float     @default(0)
+  totalExpenses   Float     @default(0)
+  totalRefunds    Float     @default(0)
+  totalCommission Float     @default(0)
+  netProfit       Float     @default(0)
+  apartmentStats  Json?
+  isClosed        Boolean   @default(false)
+  closedAt        DateTime?
+  closedBy        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([year, month])
+}
+
+model SystemSettings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?
+  category    String   @default("general")
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  familyId   String
+  deviceInfo Json?
+  ipAddress  String?
+  isRevoked  Boolean  @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([familyId])
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  type      TokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id         String   @id @default(uuid())
+  email      String
+  ipAddress  String
+  userAgent  String?
+  success    Boolean
+  failReason String?
+  createdAt  DateTime @default(now())
+
+  @@index([email])
+  @@index([ipAddress])
+  @@index([createdAt])
+}
+
+model OAuthAccount {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model ProfileChangeLog {
+  id            String   @id @default(uuid())
+  userId        String
+  fieldName     String
+  oldValue      String?
+  newValue      String?
+  changedBy     String
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+  changedByUser User     @relation("AdminProfileChanges", fields: [changedBy], references: [id])
+  user          User     @relation("UserProfileChanges", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SecurityEvent {
+  id        String            @id @default(uuid())
+  userId    String?
+  eventType SecurityEventType
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  severity  EventSeverity     @default(INFO)
+  createdAt DateTime          @default(now())
+  user      User?             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model TelegramVerification {
+  id        String    @id @default(uuid())
+  userId    String
+  code      String    @unique
+  expiresAt DateTime
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+  @@index([expiresAt])
+}
+
+model TelegramBotSettings {
+  id            String   @id @default("singleton")
+  botUsername   String?
+  webhookUrl    String?
+  isActive      Boolean  @default(true)
+  totalUsers    Int      @default(0)
+  verifiedUsers Int      @default(0)
+  messagesSent  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+model TelegramBotLog {
+  id          String   @id @default(uuid())
+  telegramId  BigInt
+  messageType String
+  direction   String
+  content     String?
+  success     Boolean  @default(true)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([telegramId])
+  @@index([messageType])
+  @@index([createdAt])
+}
+
+model LegalDocument {
+  id              String                 @id @default(uuid())
+  type            LegalDocumentType      @unique
+  title           String
+  slug            String                 @unique
+  content         String
+  version         String
+  effectiveDate   DateTime
+  isActive        Boolean                @default(true)
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  createdBy       String?
+  versions        LegalDocumentVersion[]
+  consents        UserConsent[]
+
+  @@index([type])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model LegalDocumentVersion {
+  id            String        @id @default(uuid())
+  documentId    String
+  version       String
+  content       String
+  effectiveDate DateTime
+  changeReason  String?
+  changedBy     String?
+  createdAt     DateTime      @default(now())
+  document      LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([version])
+}
+
+model UserConsent {
+  id              String         @id @default(uuid())
+  userId          String
+  consentType     ConsentType
+  status          ConsentStatus  @default(GRANTED)
+  documentId      String?
+  documentVersion String?
+  ipAddress       String?
+  userAgent       String?
+  consentText     String?
+  grantedAt       DateTime       @default(now())
+  withdrawnAt     DateTime?
+  expiresAt       DateTime?
+  logs            ConsentLog[]
+  document        LegalDocument? @relation(fields: [documentId], references: [id])
+
+  @@unique([userId, consentType, documentVersion])
+  @@index([userId])
+  @@index([consentType])
+  @@index([status])
+  @@index([grantedAt])
+}
+
+model ConsentLog {
+  id             String         @id @default(uuid())
+  consentId      String
+  action         String
+  previousStatus ConsentStatus?
+  newStatus      ConsentStatus
+  ipAddress      String?
+  userAgent      String?
+  reason         String?
+  createdAt      DateTime       @default(now())
+  consent        UserConsent    @relation(fields: [consentId], references: [id], onDelete: Cascade)
+
+  @@index([consentId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model CookieConsent {
+  id        String   @id @default(uuid())
+  visitorId String   @unique
+  userId    String?
+  essential Boolean  @default(true)
+  analytics Boolean  @default(false)
+  marketing Boolean  @default(false)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DataRequest {
+  id            String    @id @default(uuid())
+  userId        String
+  requestType   String
+  status        String    @default("pending")
+  reason        String?
+  requestedData String?
+  processedAt   DateTime?
+  processedBy   String?
+  responseNote  String?
+  exportFileUrl String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([requestType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CalendarSync {
+  id             String                  @id @default(uuid())
+  userId         String
+  apartmentId    String?
+  type           CalendarSyncType
+  status         CalendarSyncStatus      @default(ACTIVE)
+  exportToken    String?                 @unique
+  importUrl      String?
+  sourceName     String?
+  syncInterval   Int                     @default(30)
+  lastSyncAt     DateTime?
+  lastSyncError  String?
+  eventsImported Int                     @default(0)
+  eventsExported Int                     @default(0)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  apartment      Apartment?              @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalEvents ExternalCalendarEvent[]
+
+  @@index([userId])
+  @@index([apartmentId])
+  @@index([exportToken])
+  @@index([type])
+  @@index([status])
+}
+
+model ExternalCalendarEvent {
+  id             String       @id @default(uuid())
+  calendarSyncId String
+  apartmentId    String
+  externalUid    String
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
+  summary        String?
+  description    String?
+  sourceName     String
+  sourceUrl      String?
+  rawData        String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  apartment      Apartment    @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  calendarSync   CalendarSync @relation(fields: [calendarSyncId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarSyncId, externalUid])
+  @@index([apartmentId])
+  @@index([startDate, endDate])
+}
+
+enum UserRole {
+  USER
+  OWNER
+  TECH_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  PENDING
+}
+
+enum ApartmentStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+  ARCHIVED
+}
+
+enum BlockedDateSource {
+  MANUAL
+  BOOKING
+  AVITO
+  BOOKING_COM
+  AIRBNB
+  OTHER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  CANCELED
+  COMPLETED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  CASH
+  STRIPE
+  CLOUDPAYMENTS
+}
+
+enum PromoCodeType {
+  PERCENTAGE
+  FIXED
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELED
+  BOOKING_REMINDER
+  PAYMENT_RECEIVED
+  REVIEW_REQUEST
+  PROMO_CODE
+  SYSTEM
+}
+
+enum AdminAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UNPUBLISH
+  BLOCK
+  UNBLOCK
+  CONFIRM
+  CANCEL
+  REFUND
+  LOGIN
+  EXPORT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  REFUND
+  COMMISSION
+  TAX
+  ADJUSTMENT
+}
+
+enum TransactionCategory {
+  BOOKING
+  CLEANING_FEE
+  SERVICE_FEE
+  CANCELLATION
+  MAINTENANCE
+  UTILITIES
+  ADVERTISING
+  OTHER
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  EMAIL_CHANGE
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  EMAIL_VERIFIED
+  EMAIL_CHANGE_REQUESTED
+  SESSION_REVOKED
+  ALL_SESSIONS_REVOKED
+  ACCOUNT_BLOCKED
+  ACCOUNT_UNBLOCKED
+  ROLE_CHANGED
+  SUSPICIOUS_ACTIVITY
+  TELEGRAM_VERIFIED
+  TELEGRAM_UNLINKED
+}
+
+enum EventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum LegalDocumentType {
+  PRIVACY_POLICY
+  PERSONAL_DATA_POLICY
+  TERMS_OF_SERVICE
+  PUBLIC_OFFER
+  COOKIE_POLICY
+  CONSENT_FORM
+  OPERATOR_INFO
+}
+
+enum ConsentType {
+  PERSONAL_DATA
+  MARKETING
+  COOKIES_ESSENTIAL
+  COOKIES_ANALYTICS
+  COOKIES_MARKETING
+  OFFER_ACCEPTANCE
+  TERMS_ACCEPTANCE
+}
+
+enum ConsentStatus {
+  GRANTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum CalendarSyncType {
+  EXPORT
+  IMPORT
+}
+
+enum CalendarSyncStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}

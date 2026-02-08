@@ -1,0 +1,28 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00639A"/>
+      <stop offset="100%" style="stop-color:#89B6CD"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#sky1)"/>
+  <!-- Море -->
+  <ellipse cx="400" cy="580" rx="500" ry="100" fill="#00639A" opacity="0.3"/>
+  <!-- Здание -->
+  <rect x="250" y="180" width="300" height="320" fill="white" rx="5"/>
+  <rect x="270" y="200" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="350" y="200" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="430" y="200" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="270" y="270" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="350" y="270" width="60" height="50" fill="#00639A" rx="3"/>
+  <rect x="430" y="270" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="270" y="340" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="350" y="340" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <rect x="430" y="340" width="60" height="50" fill="#89B6CD" rx="3"/>
+  <!-- Балкон -->
+  <rect x="330" y="410" width="100" height="90" fill="#f0f4f8" rx="3"/>
+  <rect x="340" y="420" width="80" height="60" fill="#89B6CD" rx="2"/>
+  <!-- Солнце -->
+  <circle cx="650" cy="100" r="50" fill="#FFD700" opacity="0.8"/>
+  <text x="400" y="550" font-family="Arial" font-size="18" fill="white" text-anchor="middle" font-weight="bold">Люкс с видом на море</text>
+</svg>

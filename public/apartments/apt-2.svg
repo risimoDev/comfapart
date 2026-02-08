@@ -1,0 +1,30 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="city2" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#00639A"/>
+      <stop offset="100%" style="stop-color:#89B6CD"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#city2)"/>
+  <!-- Здания города на фоне -->
+  <rect x="50" y="300" width="80" height="200" fill="#004165" opacity="0.5"/>
+  <rect x="150" y="250" width="100" height="250" fill="#004165" opacity="0.4"/>
+  <rect x="600" y="280" width="90" height="220" fill="#004165" opacity="0.5"/>
+  <rect x="700" y="320" width="70" height="180" fill="#004165" opacity="0.4"/>
+  <!-- Главное здание -->
+  <rect x="280" y="200" width="240" height="300" fill="white" rx="5"/>
+  <rect x="300" y="220" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="360" y="220" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="420" y="220" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="300" y="280" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="360" y="280" width="45" height="40" fill="#00639A" rx="2"/>
+  <rect x="420" y="280" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="300" y="340" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="360" y="340" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <rect x="420" y="340" width="45" height="40" fill="#89B6CD" rx="2"/>
+  <!-- Дверь -->
+  <rect x="370" y="420" width="60" height="80" fill="#00639A" rx="3"/>
+  <!-- Дорога -->
+  <rect x="0" y="500" width="800" height="100" fill="#333"/>
+  <text x="400" y="550" font-family="Arial" font-size="18" fill="white" text-anchor="middle" font-weight="bold">Студия в центре Москвы</text>
+</svg>
