@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       prisma.review.aggregate({
         where: {
           apartmentId: { in: apartmentIds },
-          status: 'APPROVED',
+          isApproved: true,
         },
         _avg: { rating: true },
         _count: true,
