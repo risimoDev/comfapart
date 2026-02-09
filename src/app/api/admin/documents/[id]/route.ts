@@ -76,8 +76,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: {
         isActive,
-        publishedAt: isActive ? new Date() : null,
-        updatedAt: new Date(),
       },
     })
 
