@@ -75,28 +75,25 @@ class LegalService {
 
   /**
    * Инициализировать документы из шаблонов
+   * Использует upsert для предотвращения ошибок при параллельных запросах
    */
   async initializeDocuments(): Promise<void> {
     for (const doc of legalDocuments) {
-      const existing = await prisma.legalDocument.findUnique({
+      await prisma.legalDocument.upsert({
         where: { type: doc.type },
+        update: {}, // Не обновляем если существует
+        create: {
+          type: doc.type,
+          title: doc.title,
+          slug: doc.slug,
+          content: doc.content,
+          version: doc.version,
+          effectiveDate: new Date(),
+          metaTitle: doc.metaTitle,
+          metaDescription: doc.metaDescription,
+          isActive: true,
+        },
       })
-
-      if (!existing) {
-        await prisma.legalDocument.create({
-          data: {
-            type: doc.type,
-            title: doc.title,
-            slug: doc.slug,
-            content: doc.content,
-            version: doc.version,
-            effectiveDate: new Date(),
-            metaTitle: doc.metaTitle,
-            metaDescription: doc.metaDescription,
-            isActive: true,
-          },
-        })
-      }
     }
   }
 
