@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   ChartBarIcon,
   CalendarDaysIcon,
@@ -31,6 +32,7 @@ interface ApiStatsData {
 }
 
 export default function StatsPage() {
+  const { accessToken } = useAuth()
   const [stats, setStats] = useState<ApiStatsData['data'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
@@ -43,7 +45,11 @@ export default function StatsPage() {
   const fetchStats = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/admin/stats?period=${period}&year=${selectedYear}`)
+      const response = await fetch(`/api/admin/stats?period=${period}&year=${selectedYear}`, {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const result: ApiStatsData = await response.json()
         if (result.success && result.data) {
@@ -59,7 +65,11 @@ export default function StatsPage() {
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     try {
-      const response = await fetch(`/api/admin/stats/export?format=${format}&period=${period}&year=${selectedYear}`)
+      const response = await fetch(`/api/admin/stats/export?format=${format}&period=${period}&year=${selectedYear}`, {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)

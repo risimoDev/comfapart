@@ -195,6 +195,26 @@ export class AuthService {
       throw new Error('Ваш аккаунт заблокирован')
     }
 
+    // Проверяем верификацию email
+    if (user.status === 'PENDING' || !user.emailVerified) {
+      await securityService.recordLoginAttempt({
+        email: normalizedEmail,
+        ipAddress: meta?.ipAddress || 'unknown',
+        userAgent: meta?.userAgent,
+        success: false,
+        failReason: 'Email not verified',
+      })
+      await securityService.logSecurityEvent({
+        userId: user.id,
+        eventType: 'LOGIN_FAILED',
+        ipAddress: meta?.ipAddress,
+        userAgent: meta?.userAgent,
+        metadata: { reason: 'Email not verified' },
+        severity: 'INFO',
+      })
+      throw new Error('Подтвердите email для входа. Проверьте почту или запросите новое письмо.')
+    }
+
     // Проверяем пароль
     const isValidPassword = await bcrypt.compare(password, user.passwordHash)
     if (!isValidPassword) {
@@ -759,6 +779,34 @@ export class AuthService {
     }
 
     return expiresAt
+  }
+
+  /**
+   * Запрос сброса пароля через Telegram
+   * Для пользователей с привязанным Telegram аккаунтом
+   */
+  async requestPasswordResetViaTelegram(telegramId: bigint): Promise<{ token: string; email: string } | null> {
+    const user = await prisma.user.findUnique({
+      where: { telegramId },
+    })
+
+    if (!user) {
+      return null
+    }
+
+    if (!user.telegramVerified) {
+      return null
+    }
+
+    const token = await securityService.createVerificationToken(user.id, 'PASSWORD_RESET')
+
+    await securityService.logSecurityEvent({
+      userId: user.id,
+      eventType: 'PASSWORD_RESET_REQUESTED',
+      metadata: { method: 'telegram' },
+    })
+
+    return { token, email: user.email }
   }
 
   /**

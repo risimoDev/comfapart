@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
       user.id,
       apartmentId,
       startDate,
-      endDate
+      endDate,
+      user.role
     )
 
     return NextResponse.json({
@@ -69,7 +70,8 @@ export async function POST(request: NextRequest) {
       user.id,
       apartmentId,
       parsedDates,
-      reason
+      reason,
+      user.role
     )
 
     return NextResponse.json({
@@ -113,7 +115,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const dates = datesParam.split(',').map(d => new Date(d))
-    const unblocked = await calendarService.unblockDates(user.id, apartmentId, dates)
+    const unblocked = await calendarService.unblockDates(user.id, apartmentId, dates, user.role)
 
     return NextResponse.json({
       success: true,

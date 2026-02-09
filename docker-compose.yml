@@ -1,0 +1,170 @@
+# =============================================================================
+# Comfort Apartments - Production Docker Compose
+# =============================================================================
+#
+# Использование:
+#   docker compose up -d          # Запуск всех сервисов
+#   docker compose logs -f        # Просмотр логов
+#   docker compose down            # Остановка
+#   docker compose pull && docker compose up -d --build  # Обновление
+#
+# =============================================================================
+
+version: "3.8"
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: comfort_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-comfort}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-comfort_apartments}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-comfort} -d ${POSTGRES_DB:-comfort_apartments}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - comfort_network
+
+  # ============================================
+  # Next.js Application (Web)
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_APP_URL=${APP_URL}
+        - NEXT_PUBLIC_APP_NAME=${APP_NAME:-Comfort Apartments}
+    container_name: comfort_web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-comfort}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-comfort_apartments}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - APP_URL=${APP_URL}
+      - NEXT_PUBLIC_APP_URL=${APP_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    networks:
+      - comfort_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.comfort-web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.comfort-web.tls.certresolver=letsencrypt"
+
+  # ============================================
+  # Telegram Bot (Polling mode)
+  # ============================================
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: comfort_bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-comfort}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-comfort_apartments}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - APP_URL=${APP_URL}
+    networks:
+      - comfort_network
+
+  # ============================================
+  # Nginx Reverse Proxy (optional, for SSL)
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: comfort_nginx
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - certbot_data:/var/www/certbot:ro
+      - certbot_certs:/etc/letsencrypt:ro
+    networks:
+      - comfort_network
+    profiles:
+      - with-nginx
+
+  # ============================================
+  # Certbot for SSL (optional)
+  # ============================================
+  certbot:
+    image: certbot/certbot
+    container_name: comfort_certbot
+    volumes:
+      - certbot_data:/var/www/certbot
+      - certbot_certs:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - comfort_network
+    profiles:
+      - with-nginx
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  certbot_data:
+    driver: local
+  certbot_certs:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  comfort_network:
+    driver: bridge

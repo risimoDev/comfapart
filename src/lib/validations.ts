@@ -77,7 +77,7 @@ export const createApartmentSchema = z.object({
     isPrimary: z.boolean()
   })).optional(),
   // Pricing
-  basePrice: z.number().positive().optional(),
+  basePrice: z.number().min(0).optional(),
   cleaningFee: z.number().min(0).optional(),
   serviceFee: z.number().min(0).optional(),
   securityDeposit: z.number().min(0).optional(),

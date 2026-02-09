@@ -106,7 +106,7 @@ export default function AdminCalendarPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success !== false) {
-          setApartments(data.items || [])
+          setApartments(data.apartments || data.items || [])
         }
       })
       .catch(console.error)
@@ -465,6 +465,18 @@ export default function AdminCalendarPage() {
               ))}
             </select>
           </div>
+          
+          {!selectedApartment && (
+            <div className="text-sm text-gray-500 italic">
+              Выберите квартиру для блокировки дат
+            </div>
+          )}
+          
+          {selectedApartment && selectedDates.length === 0 && (
+            <div className="text-sm text-blue-600">
+              Кликните по датам в календаре для выбора
+            </div>
+          )}
           
           {selectedApartment && selectedDates.length > 0 && (
             <div className="flex items-center gap-2">

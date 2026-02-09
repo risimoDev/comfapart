@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   Calendar, 
   MapPin, 
@@ -33,6 +34,7 @@ interface Booking {
 }
 
 export default function AccountBookingsPage() {
+  const { accessToken } = useAuth()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled'>('upcoming')
@@ -41,7 +43,11 @@ export default function AccountBookingsPage() {
     const fetchBookings = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch('/api/bookings')
+        const response = await fetch('/api/bookings', {
+          headers: {
+            ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+          }
+        })
         if (response.ok) {
           const data = await response.json()
           setBookings(data.bookings || [])

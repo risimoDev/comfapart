@@ -206,11 +206,12 @@ export class TelegramService {
     }
   ): Promise<boolean> {
     if (!this.isConfigured()) {
-      console.warn('Telegram bot not configured')
+      console.warn('[Telegram] Bot not configured - TELEGRAM_BOT_TOKEN is not set')
       return false
     }
 
     try {
+      console.log(`[Telegram] Sending message to chat ${chatId}`)
       const response = await fetch(`${this.apiUrl}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -710,6 +711,107 @@ ${data.ip ? `📍 IP: ${data.ip}` : ''}
 
 <a href="${APP_URL}/settings/security">Настройки безопасности</a>
     `.trim(),
+
+    passwordReset: (data: {
+      resetUrl: string
+      email: string
+    }) => `
+🔐 <b>Восстановление пароля</b>
+
+Вы запросили сброс пароля для аккаунта:
+📧 ${data.email}
+
+🔗 <a href="${data.resetUrl}">Нажмите здесь для сброса пароля</a>
+
+Или скопируйте ссылку:
+<code>${data.resetUrl}</code>
+
+⚠️ <b>Ссылка действительна 30 минут.</b>
+⚠️ <b>Никому не передавайте эту ссылку!</b>
+    `.trim(),
+  }
+
+  /**
+   * Отправляет ссылку сброса пароля через Telegram
+   */
+  async sendPasswordResetLink(
+    email: string,
+    resetToken: string
+  ): Promise<{ success: boolean; error?: string }> {
+    // Находим пользователя по email
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { 
+        id: true,
+        telegramId: true, 
+        telegramVerified: true,
+        email: true,
+      },
+    })
+
+    if (!user) {
+      return { success: false, error: 'Пользователь не найден' }
+    }
+
+    if (!user.telegramVerified || !user.telegramId) {
+      return { 
+        success: false, 
+        error: 'Telegram не привязан к этому аккаунту. Используйте восстановление через email.' 
+      }
+    }
+
+    const resetUrl = `${APP_URL}/auth/reset-password?token=${resetToken}`
+    const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+
+    // Telegram не разрешает localhost или http:// URL в inline кнопках
+    // Отправляем кнопку только для https:// URL
+    const isSecureUrl = resetUrl.startsWith('https://')
+    
+    const messageOptions: {
+      parseMode: 'HTML'
+      replyMarkup?: object
+    } = {
+      parseMode: 'HTML',
+    }
+    
+    if (isSecureUrl) {
+      messageOptions.replyMarkup = {
+        inline_keyboard: [[
+          { text: '🔑 Сбросить пароль', url: resetUrl }
+        ]]
+      }
+    }
+
+    const sent = await this.sendMessage(
+      user.telegramId,
+      this.templates.passwordReset({ resetUrl, email: maskedEmail }),
+      messageOptions
+    )
+
+    if (!sent) {
+      // Проверяем конкретную причину ошибки
+      if (!this.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Telegram бот не настроен. Добавьте TELEGRAM_BOT_TOKEN в переменные окружения.' 
+        }
+      }
+      return { 
+        success: false, 
+        error: 'Не удалось отправить сообщение в Telegram. Убедитесь, что вы начали диалог с ботом @' + TELEGRAM_BOT_USERNAME 
+      }
+    }
+
+    // Логируем событие безопасности
+    await prisma.securityEvent.create({
+      data: {
+        userId: user.id,
+        eventType: 'PASSWORD_RESET_REQUESTED',
+        metadata: { method: 'telegram', email },
+      }
+    })
+
+    return { success: true }
   }
 }
 

@@ -20,6 +20,7 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { AmenityIcon } from '@/components/apartments'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Динамический импорт карты (отключаем SSR)
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { 
@@ -130,6 +131,7 @@ const initialFormData: ApartmentFormData = {
 
 export default function NewApartmentPage() {
   const router = useRouter()
+  const { accessToken } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<ApartmentFormData>(initialFormData)
   const [amenities, setAmenities] = useState<Amenity[]>([])
@@ -220,15 +222,38 @@ export default function NewApartmentPage() {
 
     setUploadingImage(true)
     
-    // Симуляция загрузки - в реальном проекте здесь будет upload на S3/Cloudinary
-    const newImages = Array.from(files).map((file, index) => ({
-      url: URL.createObjectURL(file),
-      alt: file.name,
-      isPrimary: formData.images.length === 0 && index === 0,
-    }))
+    try {
+      const formDataUpload = new FormData()
+      Array.from(files).forEach(file => {
+        formDataUpload.append('images', file)
+      })
 
-    updateFormData({ images: [...formData.images, ...newImages] })
-    setUploadingImage(false)
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
+        body: formDataUpload,
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        const newImages = result.data.images.map((img: { url: string; originalName: string }, index: number) => ({
+          url: img.url,
+          alt: img.originalName,
+          isPrimary: formData.images.length === 0 && index === 0,
+        }))
+        updateFormData({ images: [...formData.images, ...newImages] })
+      } else {
+        setErrors({ images: result.error || 'Ошибка загрузки изображений' })
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      setErrors({ images: 'Ошибка загрузки изображений' })
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const removeImage = (index: number) => {
@@ -255,7 +280,10 @@ export default function NewApartmentPage() {
     try {
       const response = await fetch('/api/admin/apartments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({
           ...formData,
           status,

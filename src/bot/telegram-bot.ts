@@ -207,6 +207,7 @@ async function handleMessage(message: TelegramUpdate['message']) {
       `📖 <b>Команды:</b>\n\n` +
       `/start - Начать\n` +
       `/status - Статус аккаунта\n` +
+      `/forgot - Восстановить пароль\n` +
       `/help - Справка\n\n` +
       `💡 Просто отправьте код верификации (6 цифр).`
     )
@@ -232,6 +233,72 @@ async function handleMessage(message: TelegramUpdate['message']) {
     } else {
       await sendMessage(chatId, `❌ Telegram не привязан.\nОтправьте код с сайта.`)
     }
+    return
+  }
+
+  // /forgot - восстановление пароля
+  if (text === '/forgot') {
+    const user = await prisma.user.findUnique({
+      where: { telegramId },
+      select: { id: true, email: true, firstName: true, telegramVerified: true },
+    })
+
+    if (!user) {
+      await sendMessage(
+        chatId,
+        `❌ <b>Telegram не привязан к аккаунту</b>\n\n` +
+        `Сначала зарегистрируйтесь на сайте и привяжите Telegram.\n\n` +
+        `🔗 <a href="${APP_URL}/auth/register">Регистрация</a>`
+      )
+      return
+    }
+
+    if (!user.telegramVerified) {
+      await sendMessage(
+        chatId,
+        `❌ <b>Telegram не верифицирован</b>\n\n` +
+        `Завершите верификацию, отправив 6-значный код с сайта.`
+      )
+      return
+    }
+
+    // Генерируем токен для сброса пароля
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000) // 30 минут
+
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        token: resetToken,
+        type: 'PASSWORD_RESET',
+        expiresAt,
+      }
+    })
+
+    await prisma.securityEvent.create({
+      data: {
+        userId: user.id,
+        eventType: 'PASSWORD_RESET_REQUESTED',
+        metadata: { method: 'telegram' },
+      }
+    })
+
+    const resetUrl = `${APP_URL}/auth/reset-password?token=${resetToken}`
+    const maskedEmail = user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+
+    await sendMessage(
+      chatId,
+      `🔐 <b>Восстановление пароля</b>\n\n` +
+      `Аккаунт: ${maskedEmail}\n\n` +
+      `Ссылка для сброса пароля действительна 30 минут.\n\n` +
+      `⚠️ <b>Никому не передавайте эту ссылку!</b>`,
+      'HTML',
+      {
+        inline_keyboard: [[
+          { text: '🔑 Сбросить пароль', url: resetUrl }
+        ]]
+      }
+    )
     return
   }
 

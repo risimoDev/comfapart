@@ -1,0 +1,35 @@
+# =============================================================================
+# Comfort Apartments - Telegram Bot Dockerfile
+# Standalone service for Telegram bot polling mode
+# =============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for Prisma
+RUN apk add --no-cache libc6-compat openssl
+
+# Copy package files
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including dev for tsx)
+RUN npm ci && npx prisma generate
+
+# Copy bot source
+COPY src/bot ./src/bot
+COPY tsconfig.json ./
+
+# Create non-root user
+RUN addgroup --system --gid 1001 botuser && \
+    adduser --system --uid 1001 botuser && \
+    chown -R botuser:botuser /app
+
+USER botuser
+
+# Health check - проверяем что процесс жив
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD pgrep -f "telegram-bot" || exit 1
+
+CMD ["npx", "tsx", "src/bot/telegram-bot.ts"]

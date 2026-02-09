@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   StarIcon,
   ChatBubbleLeftIcon,
@@ -58,6 +59,7 @@ interface ReviewStats {
 }
 
 export default function ReviewsPage() {
+  const { accessToken } = useAuth()
   const [reviews, setReviews] = useState<Review[]>([])
   const [stats, setStats] = useState<ReviewStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -80,7 +82,11 @@ export default function ReviewsPage() {
       if (filterStatus !== 'all') params.set('status', filterStatus)
       if (filterRating) params.set('rating', filterRating.toString())
 
-      const response = await fetch(`/api/admin/reviews?${params}`)
+      const response = await fetch(`/api/admin/reviews?${params}`, {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         setReviews(data.reviews || [])
@@ -97,7 +103,10 @@ export default function ReviewsPage() {
     try {
       const response = await fetch('/api/admin/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({
           action: 'approve',
           id: review.id,
@@ -118,7 +127,10 @@ export default function ReviewsPage() {
     try {
       const response = await fetch('/api/admin/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({
           action: 'reject',
           id: review.id,
@@ -139,7 +151,10 @@ export default function ReviewsPage() {
     try {
       const response = await fetch('/api/admin/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({
           action: 'delete',
           id: review.id,
@@ -167,7 +182,10 @@ export default function ReviewsPage() {
     try {
       const response = await fetch('/api/admin/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({
           action: 'reply',
           id: selectedReview.id,

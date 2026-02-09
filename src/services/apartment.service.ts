@@ -100,7 +100,7 @@ export class ApartmentService {
           }
         }),
         // Создаём pricing
-        ...(basePrice && {
+        ...(basePrice !== undefined && {
           pricing: {
             create: {
               basePrice,
@@ -459,8 +459,11 @@ export class ApartmentService {
 
   /**
    * Публикует апартамент
+   * @param id - ID апартамента
+   * @param userId - ID текущего пользователя
+   * @param isAdmin - является ли пользователь TECH_ADMIN
    */
-  async publishApartment(id: string): Promise<Apartment> {
+  async publishApartment(id: string, userId?: string, isAdmin?: boolean): Promise<Apartment> {
     // Проверяем обязательные поля
     const apartment = await prisma.apartment.findUnique({
       where: { id },
@@ -469,6 +472,11 @@ export class ApartmentService {
 
     if (!apartment) {
       throw new Error('Апартамент не найден')
+    }
+
+    // Проверка прав доступа: TECH_ADMIN имеет полный доступ, OWNER только к своим апартаментам
+    if (userId && !isAdmin && apartment.ownerId !== userId) {
+      throw new Error('Доступ запрещён')
     }
 
     if (apartment.images.length === 0) {
@@ -490,8 +498,26 @@ export class ApartmentService {
 
   /**
    * Скрывает апартамент
+   * @param id - ID апартамента
+   * @param userId - ID текущего пользователя
+   * @param isAdmin - является ли пользователь TECH_ADMIN
    */
-  async hideApartment(id: string): Promise<Apartment> {
+  async hideApartment(id: string, userId?: string, isAdmin?: boolean): Promise<Apartment> {
+    // Проверяем существование апартамента
+    const apartment = await prisma.apartment.findUnique({
+      where: { id },
+      select: { ownerId: true },
+    })
+
+    if (!apartment) {
+      throw new Error('Апартамент не найден')
+    }
+
+    // Проверка прав доступа: TECH_ADMIN имеет полный доступ, OWNER только к своим апартаментам
+    if (userId && !isAdmin && apartment.ownerId !== userId) {
+      throw new Error('Доступ запрещён')
+    }
+
     const updated = await prisma.apartment.update({
       where: { id },
       data: { status: 'HIDDEN' as PrismaApartmentStatus },

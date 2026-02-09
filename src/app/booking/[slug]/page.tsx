@@ -73,6 +73,9 @@ export default function BookingPage({ params }: BookingPageProps) {
     comment: ''
   })
 
+  // Согласие с офертой
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
+
   // Загрузка данных
   useEffect(() => {
     const fetchData = async () => {
@@ -374,24 +377,55 @@ export default function BookingPage({ params }: BookingPageProps) {
                   )}
                 </div>
 
+                {/* Политика отмены */}
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl mb-4">
+                  <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                    Политика отмены бронирования
+                  </h3>
+                  <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                    <li>• Бесплатная отмена за 7+ дней до заезда — полный возврат</li>
+                    <li>• Отмена за 3-7 дней до заезда — возврат 50%</li>
+                    <li>• Отмена менее чем за 3 дня — без возврата</li>
+                    <li>• В случае форс-мажора — индивидуальное рассмотрение</li>
+                  </ul>
+                </div>
+
                 {/* Условия */}
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl mb-6">
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl mb-4">
                   <div className="flex items-start gap-3">
                     <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p className="font-medium text-primary mb-1">Безопасное бронирование</p>
                       <p className="text-gray-600 dark:text-gray-400">
-                        Нажимая "Забронировать", вы соглашаетесь с{' '}
-                        <Link href="/terms" className="text-primary hover:underline">
-                          условиями бронирования
-                        </Link>{' '}
-                        и{' '}
-                        <Link href="/privacy" className="text-primary hover:underline">
-                          политикой конфиденциальности
-                        </Link>.
+                        Ваши данные защищены. Оплата производится после подтверждения бронирования.
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Чекбокс согласия с офертой */}
+                <div className="mb-6">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200">
+                      Я ознакомился и согласен с{' '}
+                      <Link href="/legal/offer" className="text-primary hover:underline">
+                        публичной офертой
+                      </Link>,{' '}
+                      <Link href="/legal/booking" className="text-primary hover:underline">
+                        условиями бронирования
+                      </Link>{' '}
+                      и{' '}
+                      <Link href="/legal/personal-data" className="text-primary hover:underline">
+                        политикой обработки персональных данных
+                      </Link>
+                    </span>
+                  </label>
                 </div>
 
                 {error && (
@@ -409,11 +443,18 @@ export default function BookingPage({ params }: BookingPageProps) {
                     className="flex-1"
                     onClick={handleSubmit}
                     loading={isSubmitting}
+                    disabled={!agreedToTerms}
                   >
                     <CreditCard className="w-4 h-4 mr-2" />
                     Забронировать
                   </Button>
                 </div>
+
+                {!agreedToTerms && (
+                  <p className="text-sm text-gray-500 text-center mt-3">
+                    Для продолжения необходимо принять условия оферты
+                  </p>
+                )}
               </motion.div>
             )}
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Cog6ToothIcon,
   BuildingOfficeIcon,
@@ -42,6 +43,7 @@ interface GroupedSettings {
 }
 
 export default function SettingsPage() {
+  const { accessToken } = useAuth()
   const [activeTab, setActiveTab] = useState<'company' | 'booking' | 'finance' | 'notifications'>('company')
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [systemSettings, setSystemSettings] = useState<GroupedSettings>({})
@@ -56,7 +58,11 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/admin/settings')
+      const response = await fetch('/api/admin/settings', {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         setCompanySettings(data.company)
@@ -98,7 +104,10 @@ export default function SettingsPage() {
       const { id, ...data } = companySettings
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ type: 'company', ...data }),
       })
 
@@ -126,7 +135,10 @@ export default function SettingsPage() {
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ type: 'system', settings }),
       })
 
@@ -144,7 +156,11 @@ export default function SettingsPage() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch('/api/admin/settings?type=export')
+      const response = await fetch('/api/admin/settings?type=export', {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -172,7 +188,10 @@ export default function SettingsPage() {
 
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ type: 'import', importData }),
       })
 

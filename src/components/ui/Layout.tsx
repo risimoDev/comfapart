@@ -376,11 +376,14 @@ interface SidebarLayoutProps {
   sidebar: React.ReactNode
   sidebarPosition?: 'left' | 'right'
   sidebarWidth?: string
+  collapsedWidth?: string
   className?: string
   sidebarClassName?: string
   contentClassName?: string
   collapsible?: boolean
-  collapsed?: boolean
+  defaultCollapsed?: boolean
+  mobileBreakpoint?: 'sm' | 'md' | 'lg' | 'xl'
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
 export function SidebarLayout({
@@ -388,29 +391,117 @@ export function SidebarLayout({
   sidebar,
   sidebarPosition = 'left',
   sidebarWidth = '280px',
+  collapsedWidth = '64px',
   className,
   sidebarClassName,
   contentClassName,
+  collapsible = false,
+  defaultCollapsed = false,
+  mobileBreakpoint = 'lg',
+  onCollapsedChange,
 }: SidebarLayoutProps) {
+  const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed)
+  const [isMobileOpen, setIsMobileOpen] = React.useState(false)
+
+  const handleToggle = () => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    onCollapsedChange?.(newState)
+  }
+
+  const breakpointClasses = {
+    sm: { hidden: 'hidden sm:flex', visible: 'sm:hidden' },
+    md: { hidden: 'hidden md:flex', visible: 'md:hidden' },
+    lg: { hidden: 'hidden lg:flex', visible: 'lg:hidden' },
+    xl: { hidden: 'hidden xl:flex', visible: 'xl:hidden' },
+  }
+
   return (
     <div
       className={cn(
-        'flex min-h-screen',
+        'flex min-h-screen relative',
         sidebarPosition === 'right' && 'flex-row-reverse',
         className
       )}
     >
+      {/* Mobile toggle button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className={cn(
+          'fixed top-4 left-4 z-50 p-2 rounded-lg bg-white dark:bg-neutral-800 shadow-lg border',
+          breakpointClasses[mobileBreakpoint].visible
+        )}
+        aria-label="Открыть меню"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div 
+          className={cn('fixed inset-0 bg-black/50 z-40', breakpointClasses[mobileBreakpoint].visible)}
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
       <aside
         className={cn(
+          // Base styles
           'flex-shrink-0 border-r border-neutral-200 dark:border-neutral-800',
-          'bg-white dark:bg-neutral-900',
+          'bg-white dark:bg-neutral-900 transition-all duration-300',
           sidebarPosition === 'right' && 'border-r-0 border-l',
+          // Desktop - hidden by default, shown on breakpoint
+          breakpointClasses[mobileBreakpoint].hidden,
+          // Mobile - absolute positioned when open
+          isMobileOpen && 'fixed inset-y-0 left-0 z-50 flex w-72',
           sidebarClassName
         )}
-        style={{ width: sidebarWidth }}
+        style={{ 
+          width: isMobileOpen ? '288px' : (collapsible && isCollapsed ? collapsedWidth : sidebarWidth)
+        }}
       >
-        {sidebar}
+        <div className="flex flex-col h-full w-full overflow-hidden">
+          {collapsible && (
+            <button
+              onClick={handleToggle}
+              className={cn(
+                'hidden self-end p-2 m-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors',
+                breakpointClasses[mobileBreakpoint].hidden.replace('hidden', 'lg:flex')
+              )}
+              aria-label={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+            >
+              <svg 
+                className={cn('w-5 h-5 transition-transform', isCollapsed && 'rotate-180')} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <div className="flex-1 overflow-y-auto">
+            {sidebar}
+          </div>
+        </div>
+        
+        {/* Mobile close button */}
+        {isMobileOpen && (
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            aria-label="Закрыть меню"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </aside>
+      
       <main className={cn('flex-1 min-w-0', contentClassName)}>
         {children}
       </main>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   TicketIcon,
   PlusIcon,
@@ -48,6 +49,7 @@ interface PromoStats {
 }
 
 export default function PromoCodesPage() {
+  const { accessToken } = useAuth()
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
   const [apartments, setApartments] = useState<Apartment[]>([])
   const [stats, setStats] = useState<PromoStats | null>(null)
@@ -80,9 +82,12 @@ export default function PromoCodesPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
+      const headers = {
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+      }
       const [promoRes, apartmentsRes] = await Promise.all([
-        fetch('/api/admin/promo'),
-        fetch('/api/admin/apartments?limit=100'),
+        fetch('/api/admin/promo', { headers }),
+        fetch('/api/admin/apartments?limit=100', { headers }),
       ])
 
       if (promoRes.ok) {
@@ -171,7 +176,10 @@ export default function PromoCodesPage() {
 
       const response = await fetch('/api/admin/promo', {
         method: editingPromo ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify(editingPromo ? { id: editingPromo.id, ...payload } : payload),
       })
 
@@ -195,6 +203,9 @@ export default function PromoCodesPage() {
     try {
       const response = await fetch(`/api/admin/promo?id=${id}`, {
         method: 'DELETE',
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
       })
 
       if (response.ok) {
@@ -209,7 +220,10 @@ export default function PromoCodesPage() {
     try {
       const response = await fetch('/api/admin/promo', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ id: promo.id, isActive: !promo.isActive }),
       })
 
@@ -312,7 +326,7 @@ export default function PromoCodesPage() {
               <div>
                 <p className="text-sm text-gray-500">Сумма скидок</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {stats.totalDiscount.toLocaleString()} ₽
+                  {(stats.totalDiscount ?? 0).toLocaleString()} ₽
                 </p>
               </div>
             </div>

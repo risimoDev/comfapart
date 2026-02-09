@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Heart, Trash2 } from 'lucide-react'
 import { ApartmentCard, ApartmentCardSkeleton } from '@/components/apartments'
 import { Button } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface FavoriteApartment {
   id: string
@@ -26,13 +27,18 @@ interface FavoriteApartment {
 }
 
 export default function AccountFavoritesPage() {
+  const { accessToken } = useAuth()
   const [favorites, setFavorites] = useState<FavoriteApartment[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const response = await fetch('/api/favorites')
+        const response = await fetch('/api/favorites', {
+          headers: {
+            ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+          }
+        })
         if (response.ok) {
           const data = await response.json()
           setFavorites(data.favorites || [])
@@ -50,7 +56,10 @@ export default function AccountFavoritesPage() {
   const removeFavorite = async (apartmentId: string) => {
     try {
       const response = await fetch(`/api/favorites/${apartmentId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
       })
 
       if (response.ok) {

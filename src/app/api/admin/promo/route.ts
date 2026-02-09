@@ -166,6 +166,22 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Промокод не найден' }, { status: 404 })
         }
 
+        // Проверка прав доступа для OWNER: может редактировать только промокоды своих апартаментов
+        if (ownerFilter.ownerId) {
+          const ownerApartments = await prisma.apartment.findMany({
+            where: { ownerId: ownerFilter.ownerId },
+            select: { id: true }
+          })
+          const ownerApartmentIds = ownerApartments.map(a => a.id)
+          // Промокод без привязки к апартаментам - только для TECH_ADMIN
+          // Промокод с апартаментами - проверяем пересечение
+          const hasAccess = existingPromo.apartmentIds.length > 0 && 
+            existingPromo.apartmentIds.some(aptId => ownerApartmentIds.includes(aptId))
+          if (!hasAccess) {
+            return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 })
+          }
+        }
+
         const updated = await prisma.promoCode.update({
           where: { id },
           data: {
@@ -194,6 +210,20 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Промокод не найден' }, { status: 404 })
         }
 
+        // Проверка прав доступа для OWNER
+        if (ownerFilter.ownerId) {
+          const ownerApartments = await prisma.apartment.findMany({
+            where: { ownerId: ownerFilter.ownerId },
+            select: { id: true }
+          })
+          const ownerApartmentIds = ownerApartments.map(a => a.id)
+          const hasAccess = existingPromo.apartmentIds.length > 0 && 
+            existingPromo.apartmentIds.some(aptId => ownerApartmentIds.includes(aptId))
+          if (!hasAccess) {
+            return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 })
+          }
+        }
+
         const updated = await prisma.promoCode.update({
           where: { id },
           data: { isActive },
@@ -211,6 +241,20 @@ export async function POST(request: NextRequest) {
 
         if (!existingPromo) {
           return NextResponse.json({ error: 'Промокод не найден' }, { status: 404 })
+        }
+
+        // Проверка прав доступа для OWNER
+        if (ownerFilter.ownerId) {
+          const ownerApartments = await prisma.apartment.findMany({
+            where: { ownerId: ownerFilter.ownerId },
+            select: { id: true }
+          })
+          const ownerApartmentIds = ownerApartments.map(a => a.id)
+          const hasAccess = existingPromo.apartmentIds.length > 0 && 
+            existingPromo.apartmentIds.some(aptId => ownerApartmentIds.includes(aptId))
+          if (!hasAccess) {
+            return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 })
+          }
         }
 
         await prisma.promoCode.delete({ where: { id } })

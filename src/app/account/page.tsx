@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Camera, Save, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
+import { useAuth } from '@/contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 const profileSchema = z.object({
@@ -29,6 +30,7 @@ interface UserProfile {
 }
 
 export default function AccountPage() {
+  const { accessToken } = useAuth()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -45,17 +47,28 @@ export default function AccountPage() {
   // Загрузка данных пользователя
   useEffect(() => {
     const fetchUser = async () => {
+      if (!accessToken) {
+        setIsLoading(false)
+        return
+      }
       try {
-        const response = await fetch('/api/auth/me')
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        })
         if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
-          reset({
-            firstName: data.user.firstName,
-            lastName: data.user.lastName,
-            phone: data.user.phone || '',
-            email: data.user.email
-          })
+          const result = await response.json()
+          const userData = result.data || result.user
+          if (userData) {
+            setUser(userData)
+            reset({
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              phone: userData.phone || '',
+              email: userData.email
+            })
+          }
         }
       } catch (error) {
         console.error('Error fetching user:', error)
@@ -65,7 +78,7 @@ export default function AccountPage() {
     }
 
     fetchUser()
-  }, [reset])
+  }, [reset, accessToken])
 
   const onSubmit = async (data: ProfileFormData) => {
     setIsSaving(true)
@@ -73,7 +86,10 @@ export default function AccountPage() {
     try {
       const response = await fetch('/api/auth/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify(data)
       })
 
@@ -192,25 +208,6 @@ export default function AccountPage() {
             </Button>
           </div>
         </form>
-      </div>
-
-      {/* Статистика */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Статистика</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <p className="text-2xl font-bold text-primary">0</p>
-            <p className="text-sm text-gray-500">Бронирований</p>
-          </div>
-          <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <p className="text-2xl font-bold text-primary">0</p>
-            <p className="text-sm text-gray-500">Отзывов</p>
-          </div>
-          <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
-            <p className="text-2xl font-bold text-primary">0</p>
-            <p className="text-sm text-gray-500">В избранном</p>
-          </div>
-        </div>
       </div>
     </div>
   )

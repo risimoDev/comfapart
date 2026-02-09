@@ -1,9 +1,14 @@
 import prisma from '@/lib/prisma'
-import { CalendarSyncType, CalendarSyncStatus, BlockedDateSource, Prisma } from '@prisma/client'
+import { CalendarSyncType, CalendarSyncStatus, BlockedDateSource, Prisma, UserRole } from '@prisma/client'
 import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
 
 // ==================== ТИПЫ ====================
+
+interface CalendarUser {
+  id: string
+  role: UserRole
+}
 
 interface CreateCalendarSyncData {
   userId: string
@@ -389,15 +394,23 @@ class CalendarService {
     userId: string, 
     apartmentId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    userRole?: UserRole
   ): Promise<CalendarEvent[]> {
     const start = startDate || new Date()
     const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // +90 дней
 
-    // Определяем квартиры пользователя
+    // TECH_ADMIN видит все квартиры, OWNER - только свои
+    const isTechAdmin = userRole === 'TECH_ADMIN'
+    
+    // Определяем фильтр квартир
     const apartmentFilter: Prisma.ApartmentWhereInput = apartmentId
-      ? { id: apartmentId, ownerId: userId }
-      : { ownerId: userId }
+      ? isTechAdmin 
+        ? { id: apartmentId }
+        : { id: apartmentId, ownerId: userId }
+      : isTechAdmin 
+        ? {}
+        : { ownerId: userId }
 
     const apartments = await prisma.apartment.findMany({
       where: apartmentFilter,
@@ -477,11 +490,17 @@ class CalendarService {
     userId: string,
     apartmentId: string,
     dates: Date[],
-    reason?: string
+    reason?: string,
+    userRole?: UserRole
   ): Promise<number> {
+    // TECH_ADMIN может блокировать даты любой квартиры
+    const isTechAdmin = userRole === 'TECH_ADMIN'
+    
     // Проверяем принадлежность квартиры
     const apartment = await prisma.apartment.findFirst({
-      where: { id: apartmentId, ownerId: userId },
+      where: isTechAdmin 
+        ? { id: apartmentId }
+        : { id: apartmentId, ownerId: userId },
     })
 
     if (!apartment) {
@@ -522,11 +541,17 @@ class CalendarService {
   async unblockDates(
     userId: string,
     apartmentId: string,
-    dates: Date[]
+    dates: Date[],
+    userRole?: UserRole
   ): Promise<number> {
+    // TECH_ADMIN может разблокировать даты любой квартиры
+    const isTechAdmin = userRole === 'TECH_ADMIN'
+    
     // Проверяем принадлежность квартиры
     const apartment = await prisma.apartment.findFirst({
-      where: { id: apartmentId, ownerId: userId },
+      where: isTechAdmin 
+        ? { id: apartmentId }
+        : { id: apartmentId, ownerId: userId },
     })
 
     if (!apartment) {

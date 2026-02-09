@@ -98,7 +98,7 @@ const menuItems: MenuItem[] = [
   { 
     icon: FileText, 
     label: 'Документы', 
-    href: '/admin/legal',
+    href: '/admin/documents',
     roles: ['TECH_ADMIN']
   },
   { 
@@ -113,8 +113,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, isLoading } = useAuth()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
+
+  // Закрываем мобильное меню при смене страницы
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
+  // На десктопе sidebar открыт по умолчанию
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true)
+        setIsMobileMenuOpen(false)
+      } else {
+        setIsSidebarOpen(false)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -154,14 +175,41 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Мобильный header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 shadow-md z-50 flex items-center justify-between px-4">
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          aria-label="Открыть меню"
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+        <Link href="/admin" className="text-xl font-bold text-primary">
+          {user.role === 'TECH_ADMIN' ? 'Tech Admin' : 'Мои объекты'}
+        </Link>
+        <div className="w-10" /> {/* Spacer */}
+      </header>
+
+      {/* Overlay для мобильного меню */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 z-40',
-          isSidebarOpen ? 'w-64' : 'w-20'
+          'fixed left-0 top-0 h-full bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 z-50',
+          // Desktop
+          'hidden lg:block',
+          isSidebarOpen ? 'lg:w-64' : 'lg:w-20',
+          // Mobile
+          isMobileMenuOpen && 'block w-72'
         )}
       >
         <div className="h-16 flex items-center justify-between px-4 border-b">
-          {isSidebarOpen && (
+          {(isSidebarOpen || isMobileMenuOpen) && (
             <div>
               <Link href="/admin" className="text-xl font-bold text-primary">
                 {user.role === 'TECH_ADMIN' ? 'Tech Admin' : 'Мои объекты'}
@@ -172,10 +220,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           )}
           <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => {
+              if (window.innerWidth >= 1024) {
+                setIsSidebarOpen(!isSidebarOpen)
+              } else {
+                setIsMobileMenuOpen(false)
+              }
+            }}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {(isSidebarOpen || isMobileMenuOpen) ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
@@ -209,7 +263,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   )}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
-                  {isSidebarOpen && (
+                  {(isSidebarOpen || isMobileMenuOpen) && (
                     <>
                       <span className="flex-1">{item.label}</span>
                       {hasChildren && (
@@ -224,7 +278,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   )}
                 </Link>
 
-                {hasChildren && isSidebarOpen && isExpanded && (
+                {hasChildren && (isSidebarOpen || isMobileMenuOpen) && isExpanded && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -253,7 +307,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white dark:bg-gray-800">
-          {isSidebarOpen && (
+          {(isSidebarOpen || isMobileMenuOpen) && (
             <div className="mb-3 px-3">
               <p className="text-sm font-medium truncate">{user.firstName} {user.lastName}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -263,11 +317,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             href="/"
             className={cn(
               'flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors',
-              !isSidebarOpen && 'justify-center'
+              !(isSidebarOpen || isMobileMenuOpen) && 'justify-center'
             )}
           >
             <Home className="w-5 h-5" />
-            {isSidebarOpen && <span>На сайт</span>}
+            {(isSidebarOpen || isMobileMenuOpen) && <span>На сайт</span>}
           </Link>
         </div>
       </aside>
@@ -275,10 +329,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <main
         className={cn(
           'transition-all duration-300 min-h-screen',
-          isSidebarOpen ? 'ml-64' : 'ml-20'
+          // Desktop margins
+          'lg:ml-20',
+          isSidebarOpen && 'lg:ml-64',
+          // Mobile top padding for header
+          'pt-16 lg:pt-0'
         )}
       >
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           {children}
         </div>
       </main>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   PlusIcon, 
   MagnifyingGlassIcon,
@@ -61,6 +62,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 export default function AdminApartmentsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { accessToken } = useAuth()
   
   const [apartments, setApartments] = useState<Apartment[]>([])
   const [total, setTotal] = useState(0)
@@ -93,7 +95,11 @@ export default function AdminApartmentsPage() {
       if (status) params.set('status', status)
       if (searchQuery) params.set('search', searchQuery)
 
-      const response = await fetch(`/api/admin/apartments?${params.toString()}`)
+      const response = await fetch(`/api/admin/apartments?${params.toString()}`, {
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
+      })
       if (response.ok) {
         const data: ApartmentsResponse = await response.json()
         setApartments(data.apartments || [])
@@ -138,7 +144,10 @@ export default function AdminApartmentsPage() {
       
       const response = await fetch(`/api/admin/apartments/${apartment.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        },
         body: JSON.stringify({ status: newStatus }),
       })
 
@@ -163,6 +172,9 @@ export default function AdminApartmentsPage() {
     try {
       const response = await fetch(`/api/admin/apartments/${apartmentToDelete.id}`, {
         method: 'DELETE',
+        headers: {
+          ...(accessToken && { Authorization: `Bearer ${accessToken}` })
+        }
       })
 
       if (response.ok) {
@@ -233,6 +245,41 @@ export default function AdminApartmentsPage() {
           <PlusIcon className="h-5 w-5" />
           Добавить объект
         </Link>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="bg-white rounded-xl border border-gray-200 p-2">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: '', label: 'Все', icon: BuildingOffice2Icon },
+            { value: 'PUBLISHED', label: 'Опубликованные', color: 'green' },
+            { value: 'DRAFT', label: 'Черновики', color: 'gray' },
+            { value: 'HIDDEN', label: 'Скрытые', color: 'orange' },
+            { value: 'ARCHIVED', label: 'В архиве', color: 'red' },
+          ].map((tab) => {
+            const isActive = statusFilter === tab.value
+            return (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setStatusFilter(tab.value)
+                  updateFilters(search, tab.value)
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition font-medium text-sm ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {tab.icon && <tab.icon className="h-4 w-4" />}
+                {tab.label}
+                {tab.color && !isActive && (
+                  <span className={`w-2 h-2 rounded-full bg-${tab.color}-500`} />
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Filters */}

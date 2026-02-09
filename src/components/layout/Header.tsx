@@ -56,11 +56,14 @@ export function Header() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Логотип */}
           <Link href="/" className="flex items-center gap-2">
-            <span className={cn('text-2xl font-display font-bold transition-colors', 
-              isHomePage && !isScrolled ? 'text-white' : 'text-primary'
-            )}>
-              Comfort
-            </span>
+            <img 
+              src="/logo.svg" 
+              alt="Comfort Apartments" 
+              className={cn(
+                'h-10 md:h-12 w-auto transition-all',
+                isHomePage && !isScrolled ? 'brightness-0 invert' : ''
+              )}
+            />
           </Link>
 
           {/* Навигация - Desktop */}

@@ -77,6 +77,70 @@ export class SecurityService {
   }
 
   /**
+   * Проверяет лимит запросов сброса пароля (5 попыток / 15 минут)
+   */
+  async checkPasswordResetRateLimit(email: string, ipAddress: string): Promise<RateLimitResult> {
+    const windowStart = new Date()
+    windowStart.setMinutes(windowStart.getMinutes() - this.LOGIN_ATTEMPT_WINDOW_MINUTES)
+
+    // Считаем попытки запроса сброса пароля по email и IP
+    const [emailAttempts, ipAttempts] = await Promise.all([
+      prisma.loginAttempt.count({
+        where: {
+          email: email.toLowerCase(),
+          failReason: 'password_reset_request',
+          createdAt: { gte: windowStart },
+        },
+      }),
+      prisma.loginAttempt.count({
+        where: {
+          ipAddress,
+          failReason: 'password_reset_request',
+          createdAt: { gte: windowStart },
+        },
+      }),
+    ])
+
+    const attempts = Math.max(emailAttempts, ipAttempts)
+    const remaining = Math.max(0, this.MAX_LOGIN_ATTEMPTS - attempts)
+    const resetAt = new Date(windowStart.getTime() + this.LOGIN_ATTEMPT_WINDOW_MINUTES * 60 * 1000)
+
+    if (attempts >= this.MAX_LOGIN_ATTEMPTS) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt,
+        retryAfter: Math.ceil((resetAt.getTime() - Date.now()) / 1000),
+      }
+    }
+
+    return {
+      allowed: true,
+      remaining,
+      resetAt,
+    }
+  }
+
+  /**
+   * Записывает попытку запроса сброса пароля
+   */
+  async recordPasswordResetAttempt(params: {
+    email: string
+    ipAddress: string
+    userAgent?: string
+  }): Promise<void> {
+    await prisma.loginAttempt.create({
+      data: {
+        email: params.email.toLowerCase(),
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        success: true, // Всегда успех, чтобы не раскрывать существование email
+        failReason: 'password_reset_request', // Используем как маркер типа запроса
+      },
+    })
+  }
+
+  /**
    * Записывает попытку входа
    */
   async recordLoginAttempt(params: {

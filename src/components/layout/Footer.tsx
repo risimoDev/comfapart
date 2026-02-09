@@ -19,9 +19,11 @@ export function Footer() {
           {/* О компании */}
           <div>
             <Link href="/" className="inline-block mb-4">
-              <span className="text-2xl font-display font-bold text-primary">
-                Comfort
-              </span>
+              <img 
+                src="/logo.svg" 
+                alt="Comfort Apartments" 
+                className="h-12 w-auto brightness-0 invert"
+              />
             </Link>
             <p className="text-gray-400 mb-4">
               Сервис по бронированию апартаментов в Перми. 
@@ -66,11 +68,6 @@ export function Footer() {
               <li>
                 <Link href="/contacts" className="text-gray-400 hover:text-white transition-colors">
                   Контакты
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">
-                  Блог
                 </Link>
               </li>
             </ul>
@@ -153,7 +150,7 @@ export function Footer() {
               <li>
                 <div className="flex items-start gap-3 text-gray-400">
                   <MapPin className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <span>Москва, ул. Примерная, д. 1</span>
+                  <span>Пермь, адрес написать</span>
                 </div>
               </li>
             </ul>

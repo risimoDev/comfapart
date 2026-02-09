@@ -14,6 +14,7 @@ const publicRoutes = [
   '/api/cities',
   '/api/categories',
   '/api/amenities',
+  '/api/legal', // Юридические документы - публичный доступ
 ]
 
 // Маршруты, которые всегда публичные (любой метод)
@@ -28,9 +29,16 @@ const alwaysPublicRoutes = [
   '/api/telegram/webhook', // webhook от Telegram
 ]
 
-// Маршруты только для админов
+// Маршруты с доступом для владельцев и админов (OWNER + TECH_ADMIN)
 const adminRoutes = [
   '/api/admin',
+]
+
+// Маршруты только для технических администраторов
+const techAdminOnlyRoutes = [
+  '/api/admin/users',
+  '/api/admin/logs',
+  '/api/admin/legal',
 ]
 
 // Маршруты для менеджеров и админов
@@ -84,9 +92,19 @@ export async function middleware(request: NextRequest) {
       )
     }
 
-    // Проверяем доступ к админ маршрутам (только TECH_ADMIN)
-    if (adminRoutes.some(route => pathname.startsWith(route))) {
+    // Проверяем доступ к маршрутам только для технических администраторов
+    if (techAdminOnlyRoutes.some(route => pathname.startsWith(route))) {
       if (payload.role !== 'TECH_ADMIN') {
+        return NextResponse.json(
+          { error: 'Доступ запрещен' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // Проверяем доступ к админ маршрутам (OWNER и TECH_ADMIN)
+    if (adminRoutes.some(route => pathname.startsWith(route))) {
+      if (payload.role !== 'TECH_ADMIN' && payload.role !== 'OWNER') {
         return NextResponse.json(
           { error: 'Доступ запрещен' },
           { status: 403 }
