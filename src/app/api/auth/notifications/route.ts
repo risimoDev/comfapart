@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
         type: 'SYSTEM',
         title: 'notification_settings',
         message: JSON.stringify(settings),
-        read: true, // Не показывать как непрочитанное
+        isRead: true, // Не показывать как непрочитанное
       }
     })
 
