@@ -4,7 +4,7 @@ module.exports = {
       name: 'comfort-web',
       script: 'node_modules/.bin/next',
       args: 'start',
-      cwd: '/opt/comfort-apartments',
+      cwd: '/opt/comfort-apartments/comfapart',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -26,7 +26,7 @@ module.exports = {
       name: 'comfort-bot',
       script: 'node_modules/.bin/tsx',
       args: 'src/bot/telegram-bot.ts',
-      cwd: '/opt/comfort-apartments',
+      cwd: '/opt/comfort-apartments/comfapart',
       instances: 1,
       exec_mode: 'fork',
       env: {
